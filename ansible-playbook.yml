@@ -1,0 +1,114 @@
+---
+- name: Configure Docker on EC2 Instances
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Remove conflicting containerd package (if exists)
+      apt:
+        name: containerd
+        state: absent
+      ignore_errors: true
+
+    - name: Update apt package index
+      apt:
+        update_cache: yes
+
+    - name: Install Docker dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Wait for APT lock to be released
+      wait_for:
+        path: /var/lib/dpkg/lock-frontend
+        state: absent
+        timeout: 300
+
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+      retries: 5
+      delay: 15
+      register: apt_update_result
+      until: apt_update_result is succeeded
+
+    - name: Update APT package index using apt-get
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+      retries: 5
+      delay: 15
+      register: apt_update_result
+      until: apt_update_result is succeeded
+        
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release | lower }} stable'
+        state: present
+      notify:
+        - Update APT cache
+
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+      when: apt_repository.changed
+
+        
+          
+    - name: Add Docker APT repository (use jammy as a workaround for noble)
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+        filename: docker
+
+
+
+    - name: Install Docker CE
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Docker login to Docker Hub
+      docker_login:
+        username: "akku1999"
+        password: "Akku@1999"
+        registry: "https://index.docker.io/v1/"
+
+    - name: Run a finance container
+      docker_container:
+        name: finance
+        image: "akku1999/mysql:8.0"  # Replace with your image
+        ports:
+          - "3306:3306"
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: finance
+          MYSQL_USER: finance_user
+          MYSQL_PASSWORD: secure123
+        restart_policy: unless-stopped
+        state: started
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      retries: 10
+      delay: 20
+      register: result
+      until: result is succeeded
