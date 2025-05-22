@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+  datasource:
+    url: jdbc:mysql://<rds-endpoint>:3306/<db>
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: akku1999
+    password: Akku@1999
