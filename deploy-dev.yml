@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+  datasource:
+    url: jdbc:mysql://<rds-endpoint>:3306/<db>
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: akku1999
+    password: Akku@1999
+
+root@akshata:/home/ubuntu# cat deploy-dev.yml
+- name: Deploy Spring Boot app to Dev
+  hosts: dev-server
+  become: true
+  tasks:
+    - name: Pull Docker image
+      shell: docker pull akku1999/account-service:latest
+
+    - name: Run Docker container
+      shell: docker run -d -p 8080:8080 --akku1999/account-service:latest
